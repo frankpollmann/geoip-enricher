@@ -19,17 +19,17 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# Select all CAPI-originated IPs
-cur.execute("SELECT DISTINCT value FROM decisions WHERE origin = 'CAPI'")
-ips = [row[0] for row in cur.fetchall()]
-
 # Create enrichment table if it doesn't exist
 cur.execute("""
     CREATE TABLE IF NOT EXISTS cti_geo (
         ip TEXT PRIMARY KEY,
         country TEXT
-    )
+    );
 """)
+
+# Select all CAPI-originated IPs
+cur.execute("SELECT DISTINCT value FROM decisions WHERE origin = 'CAPI'")
+ips = [row[0] for row in cur.fetchall()]
 
 # Insert country for each IP
 for ip in ips:
@@ -39,4 +39,14 @@ for ip in ips:
         country = 'Unknown'
     cur.execute("""
         INSERT INTO cti_geo (ip, country)
-        VAL
+        VALUES (%s, %s)
+        ON CONFLICT (ip) DO NOTHING;
+    """, (ip, country))
+
+# Commit and close
+conn.commit()
+cur.close()
+conn.close()
+reader.close()
+
+print(f"✅ Enrichment complete for {len(ips)} IPs.")
