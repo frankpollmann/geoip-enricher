@@ -6,4 +6,3 @@ services:
       context: .
     container_name: geoip-enricher
     restart: unless-stopped
-    env_file: .env
